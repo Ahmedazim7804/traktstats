@@ -13,3 +13,4 @@ Trakt all-time-stats without trakt vip
 
 # Note
 * Program Ui is only optimized for 1360x768 resolution
+* As i made it only for personal use, the code is messy and have no comments.
