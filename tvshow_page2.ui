@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>580</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget{
+	background-color: black;
+}
+
+QLabel[accessibleName='title'] {
+	color: white;
+	font-size: 15px;
+	font: &quot;Sans Serif Collection&quot;;
+	font-weight: bold;
+	border: 1px solid white;
+	padding-left: 8;
+	padding-right: 8;
+	margin-top: 25px;
+	margin-left: 40;
+}
+
+QLabel[accessibleName='graph_title'] {
+	color: white;
+	font-size: 13px;
+}</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="topMargin">
+    <number>9</number>
+   </property>
+   <property name="bottomMargin">
+    <number>9</number>
+   </property>
+   <item row="2" column="0" colspan="3" alignment="Qt::AlignHCenter|Qt::AlignTop">
+    <widget class="QLabel" name="label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="baseSize">
+      <size>
+       <width>300</width>
+       <height>200</height>
+      </size>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="accessibleName">
+      <string>graph_title</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
+     <property name="text">
+      <string>EPISODE PLAYS BY YEAR</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Preferred</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>30</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="4" column="0" alignment="Qt::AlignHCenter|Qt::AlignTop">
+    <widget class="QLabel" name="label_2">
+     <property name="accessibleName">
+      <string>graph_title</string>
+     </property>
+     <property name="text">
+      <string>EPISODE PLAYS BY MONTH</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="2" alignment="Qt::AlignHCenter|Qt::AlignTop">
+    <widget class="QLabel" name="label_3">
+     <property name="accessibleName">
+      <string>graph_title</string>
+     </property>
+     <property name="text">
+      <string>EPISODE PLAYS BY DAY OF THE WEEK</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="MplWidget" name="graph2" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: green;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="3" alignment="Qt::AlignHCenter">
+    <widget class="MplWidget" name="graph1" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: red;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="MplWidget" name="graph3" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: yellow;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MplWidget</class>
+   <extends>QWidget</extends>
+   <header>mplwidget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
