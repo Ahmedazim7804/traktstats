@@ -1,5 +1,5 @@
 # Traktstats
-Trakt all-time-stats without trakt vip
+Trakt [all-time-stats](https://blog.trakt.tv/all-time-year-in-review-f6f931e4461d) without trakt vip
 
 # Prerequisite
 * Python3
