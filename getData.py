@@ -25,7 +25,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
 tmdb = TMDb()
-tmdb.api_key = ''  # Your TMDB api key
+tmdb.api_key = tmdb_API_KEY = ''  # Your TMDB api key
 trakt_CLIENT_ID = ""  # Your TRAKT client id
 
 
