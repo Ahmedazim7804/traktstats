@@ -1,3 +1,4 @@
+from cProfile import run
 import os
 import sys
 import json
@@ -18,6 +19,7 @@ from tmdbv3api import Episode
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 from PyQt5.QtWebEngineWidgets import QWebEngineView
+from joblib import Parallel, delayed
 
 
 # Uncomment Bottom line if you want to download the data again
@@ -25,8 +27,8 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
 tmdb = TMDb()
-tmdb.api_key = tmdb_API_KEY = ''  # Your TMDB api key
-trakt_CLIENT_ID = ""  # Your TRAKT client id
+tmdb.api_key = tmdb_API_KEY = os.environ['TMDB_API_KEY']
+trakt_CLIENT_ID = os.environ['TRAKT_API_KEY']
 
 
 merry = Merry()
@@ -248,81 +250,83 @@ def get_countries(tmdb_id, trakt_id, type_of_item):
 
     return countries
 
+def run_parallely(fn, items):
+    return Parallel(n_jobs=-2, backend='threading', require='sharedmem')(delayed(fn)(item) for item in items)
+
 @merry._try
 def parse_movie_data():
     print('Parsing Movies Data')
-    for item in tqdm(data['history']):
-        type = item['type']
-        if type == 'movie':
-            tmdb_id, trakt_id = itemgetter('tmdb', 'trakt')(item['movie']['ids'])
-            if tmdb_id not in watched_movies.keys():
-                watched_movies[tmdb_id] = DotMap()
-                watched_movies[tmdb_id]['title'] = item['movie']['title']
-                watched_movies[tmdb_id]['time'] = [item['watched_at']]
-                watched_movies[tmdb_id]['plays'] = 1
-                watched_movies[tmdb_id]['released_year'] = item['movie']['year']
-                watched_movies[tmdb_id]['id'] = str(tmdb_id)
-                watched_movies[tmdb_id]['type'] = type
-                watched_movies[tmdb_id]['trakt_id'] = trakt_id
-                watched_movies[tmdb_id]['rating'] = ratings[tmdb_id] if tmdb_id in ratings.keys() else 0
-                watched_movies[tmdb_id]['runtime'] = get_runtime(tmdb_id, 'movie')
-                watched_movies[tmdb_id]['genres'] = get_genres(tmdb_id, 'movie')
-                watched_movies[tmdb_id]['poster'] = get_poster(tmdb_id, 'movie')
-                watched_movies[tmdb_id]['country'] = get_countries(tmdb_id, trakt_id, 'movie')
-                watched_movies[tmdb_id]['studios'] = get_studios(tmdb_id)
-                watched_movies[tmdb_id]['cast'] = get_cast(tmdb_id, 'movie')
-                watched_movies[tmdb_id]['crew'] = get_crew(tmdb_id, 'movie')
-            else:
-                watched_movies[tmdb_id]['plays'] += 1
-                watched_movies[tmdb_id]['time'].append(item['watched_at'])
+    run_parallely(process_watched_movies, tqdm(data['history']))
 
-            #time.sleep(0.5)
-
+def process_watched_movies(item):
+    type = item['type']
+    if type == 'movie':
+        tmdb_id, trakt_id = itemgetter('tmdb', 'trakt')(item['movie']['ids'])
+        if tmdb_id not in watched_movies.keys():
+            watched_movies[tmdb_id] = DotMap()
+            watched_movies[tmdb_id]['title'] = item['movie']['title']
+            watched_movies[tmdb_id]['time'] = [item['watched_at']]
+            watched_movies[tmdb_id]['plays'] = 1
+            watched_movies[tmdb_id]['released_year'] = item['movie']['year']
+            watched_movies[tmdb_id]['id'] = str(tmdb_id)
+            watched_movies[tmdb_id]['type'] = type
+            watched_movies[tmdb_id]['trakt_id'] = trakt_id
+            watched_movies[tmdb_id]['rating'] = ratings[tmdb_id] if tmdb_id in ratings.keys() else 0
+            watched_movies[tmdb_id]['runtime'] = get_runtime(tmdb_id, 'movie')
+            watched_movies[tmdb_id]['genres'] = get_genres(tmdb_id, 'movie')
+            watched_movies[tmdb_id]['poster'] = get_poster(tmdb_id, 'movie')
+            watched_movies[tmdb_id]['country'] = get_countries(tmdb_id, trakt_id, 'movie')
+            watched_movies[tmdb_id]['studios'] = get_studios(tmdb_id)
+            watched_movies[tmdb_id]['cast'] = get_cast(tmdb_id, 'movie')
+            watched_movies[tmdb_id]['crew'] = get_crew(tmdb_id, 'movie')
+        else:
+            watched_movies[tmdb_id]['plays'] += 1
+            watched_movies[tmdb_id]['time'].append(item['watched_at'])
 
 @merry._try
 def parse_shows_data():
     print('Parsing TV Data')
-    for item in tqdm(data['history']):
-        type = item['type']
-        if type == 'episode':
-            tmdb_id = item['episode']['ids']['tmdb']
-            tmdb_show_id, trakt_show_id = itemgetter('tmdb', 'trakt')(item['show']['ids'])
-            if tmdb_id not in watched_episodes.keys():
-                watched_episodes[tmdb_id] = DotMap()
-                watched_episodes[tmdb_id]['title'] = item['episode']['title']
-                watched_episodes[tmdb_id]['season'] = season = item['episode']['season']
-                watched_episodes[tmdb_id]['episode'] = episode = item['episode']['number']
-                watched_episodes[tmdb_id]['time'] = [item['watched_at']]
-                watched_episodes[tmdb_id]['plays'] = 1
-                watched_episodes[tmdb_id]['show'] = item['show']['title']
-                watched_episodes[tmdb_id]['tmdb_show_id'] = tmdb_show_id
-                watched_episodes[tmdb_id]['type'] = type
-                watched_episodes[tmdb_id]['rating'] = ratings[tmdb_id] if tmdb_id in ratings.keys() else 0
-                watched_episodes[tmdb_id]['runtime'] = get_runtime(tmdb_id, 'tv', tmdb_show_id=tmdb_show_id, trakt_show_id=trakt_show_id, season=season, episode=episode)
-                watched_episodes[tmdb_id]['cast'] = get_cast(tmdb_id, 'tv', tmdb_show_id=tmdb_show_id, season=season,
-                                                             episode=episode)
-                watched_episodes[tmdb_id]['crew'] = get_crew(tmdb_id, 'tv', tmdb_show_id=tmdb_show_id, season=season,
-                                                             episode=episode)
-            else:
-                watched_episodes[tmdb_id]['plays'] += 1
-                watched_episodes[tmdb_id]['time'].append(item['watched_at'])
+    run_parallely(process_watched_episodes, tqdm(data['history']))
+    run_parallely(process_watched_shows, data['watched'])
 
-    for item in data['watched']:
-        if 'show' in item.keys():
-            tmdb_id, trakt_id = itemgetter('tmdb', 'trakt')(item['show']['ids'])
+def process_watched_episodes(item):
+    type = item['type']
+    if type == 'episode':
+        tmdb_id = item['episode']['ids']['tmdb']
+        tmdb_show_id, trakt_show_id = itemgetter('tmdb', 'trakt')(item['show']['ids'])
+        if tmdb_id not in watched_episodes.keys():
+            watched_episodes[tmdb_id] = DotMap()
+            watched_episodes[tmdb_id]['title'] = item['episode']['title']
+            watched_episodes[tmdb_id]['season'] = season = item['episode']['season']
+            watched_episodes[tmdb_id]['episode'] = episode = item['episode']['number']
+            watched_episodes[tmdb_id]['time'] = [item['watched_at']]
+            watched_episodes[tmdb_id]['plays'] = 1
+            watched_episodes[tmdb_id]['show'] = item['show']['title']
+            watched_episodes[tmdb_id]['tmdb_show_id'] = tmdb_show_id
+            watched_episodes[tmdb_id]['type'] = type
+            watched_episodes[tmdb_id]['rating'] = ratings[tmdb_id] if tmdb_id in ratings.keys() else 0
+            watched_episodes[tmdb_id]['runtime'] = get_runtime(tmdb_id, 'tv', tmdb_show_id=tmdb_show_id, trakt_show_id=trakt_show_id, season=season, episode=episode)
+            watched_episodes[tmdb_id]['cast'] = get_cast(tmdb_id, 'tv', tmdb_show_id=tmdb_show_id, season=season, episode=episode)
+            watched_episodes[tmdb_id]['crew'] = get_crew(tmdb_id, 'tv', tmdb_show_id=tmdb_show_id, season=season, episode=episode)
+        else:
+            watched_episodes[tmdb_id]['plays'] += 1
+            watched_episodes[tmdb_id]['time'].append(item['watched_at'])
 
-            watched_shows[tmdb_id] = DotMap()
-            watched_shows[tmdb_id]['id'] = str(tmdb_id)
-            watched_shows[tmdb_id]['title'] = item['show']['title']
-            watched_shows[tmdb_id]['plays'] = item['plays']
-            watched_shows[tmdb_id]['trakt_id'] = str(trakt_id)
-            watched_shows[tmdb_id]['released_year'] = item['show']['year']
-            watched_shows[tmdb_id]['rating'] = ratings[tmdb_id] if tmdb_id in ratings.keys() else 0
-            watched_shows[tmdb_id]['network'] = get_network(tmdb_id, trakt_id)
-            watched_shows[tmdb_id]['genres'] = get_genres(tmdb_id, 'tv')
-            watched_shows[tmdb_id]['poster'] = get_poster(tmdb_id, 'tv')
-            watched_shows[tmdb_id]['country'] = get_countries(tmdb_id, trakt_id, 'tv')
+def process_watched_shows(item):
+    if 'show' in item.keys():
+        tmdb_id, trakt_id = itemgetter('tmdb', 'trakt')(item['show']['ids'])
 
+        watched_shows[tmdb_id] = DotMap()
+        watched_shows[tmdb_id]['id'] = str(tmdb_id)
+        watched_shows[tmdb_id]['title'] = item['show']['title']
+        watched_shows[tmdb_id]['plays'] = item['plays']
+        watched_shows[tmdb_id]['trakt_id'] = str(trakt_id)
+        watched_shows[tmdb_id]['released_year'] = item['show']['year']
+        watched_shows[tmdb_id]['rating'] = ratings[tmdb_id] if tmdb_id in ratings.keys() else 0
+        watched_shows[tmdb_id]['network'] = get_network(tmdb_id, trakt_id)
+        watched_shows[tmdb_id]['genres'] = get_genres(tmdb_id, 'tv')
+        watched_shows[tmdb_id]['poster'] = get_poster(tmdb_id, 'tv')
+        watched_shows[tmdb_id]['country'] = get_countries(tmdb_id, trakt_id, 'tv')
 
 @merry._try
 def download_tmdb_image(url, basepath, filename, size):
@@ -334,7 +338,6 @@ def download_tmdb_image(url, basepath, filename, size):
     path = os.path.join(".cache", basepath, filename+extension)
 
     if not os.path.exists(path):
-        print(f"Downloading {filename}")
         request = requests.get(url)
         if request.status_code != 200:
             return False

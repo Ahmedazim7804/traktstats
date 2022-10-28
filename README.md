@@ -1,16 +1,18 @@
 # Traktstats
-Trakt [all-time-stats](https://blog.trakt.tv/all-time-year-in-review-f6f931e4461d) without trakt vip
+Trakt [all-time-stats](https://blog.trakt.tv/all-time-year-in-review-f6f931e4461d) without Trakt VIP
 
 # Prerequisite
 * Python3
-* Trakt Client Id
-* Tmdb Api key
+* [Trakt Client ID](https://trakt.tv/oauth/applications)
+* [TMDB API key](https://www.themoviedb.org/settings/api)
 * Full export of trakt data using [traktexport](https://github.com/seanbreckenridge/traktexport)
 
 # Usage
-* add your trakt-client-id and tmdb-api-key to getdata.py file.
-* ```python ui.py```
+```sh
+poetry install # one time
+TMDB_API_KEY="value-here" TRAKT_API_KEY="value-here" python ui.py
+```
 
 # Note
-* Program Ui is only optimized for 1360x768 resolution
-* As i made it only for personal use, the code is messy and have no comments.
+* Program UI is only optimized for 1360x768 resolution
+* As i made it only for personal use, the code is messy and has no comments.
