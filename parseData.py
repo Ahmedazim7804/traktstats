@@ -227,17 +227,18 @@ def tv_show_networks():
         network = show['network']
         networks[network] = networks.get(network, 0) + 1
 
-    networks = {k: v for k, v in sorted(networks.items(), key=lambda item: item[1], reverse=True)}
-    network_icons = [get_path(network, 'network') for network in networks]
+    networks = {k: v for k, v in sorted(networks.items(), key=lambda item: item[1], reverse=True) if k is not None}
+    network_paths = {network: get_path(network, 'network') for network in networks}
+    network_icons = {network: network_paths[network] for network in network_paths if os.path.exists(network_paths[network])}
     network_labels = {id: networks_id_2_name[id] for id in networks}
     colors = ["#%06x" % random.randint(0, 0xFFFFFF) for i in networks.keys()]
 
-    bubble_chart = BubbleChart(area=list(networks.values()), bubble_spacing=0.1)
+    bubble_chart = BubbleChart(area=[networks[network] for network in networks if network in network_icons], bubble_spacing=0.1)
     bubble_chart.collapse()
 
     fig, ax = plt.subplots(subplot_kw=dict(aspect="equal"))
 
-    bubble_cords = bubble_chart.plot(ax, ids=list(networks.keys()), icons=network_icons, colors=colors)
+    bubble_cords = bubble_chart.plot(ax, ids=list(network_icons.keys()), icons=list(network_icons.values()), colors=colors)
 
     x = [i[0] for i in bubble_cords]
     y = [j[1] for j in bubble_cords]
@@ -352,7 +353,7 @@ def highest_rated_tv():
 
         if filename not in processed_images:
 
-            print(f'Processing Image {filename}')
+            # print(f'Processing Image {filename}')
             image = Image.open(filepath)
             draw = ImageDraw.Draw(image)
 
@@ -471,7 +472,8 @@ def top_movies():
     most_played_movies = {}
     for id, movie in sorted_watched_movies.items():
         playtime = movie['plays'] * movie['runtime']
-        poster_url = 'https://image.tmdb.org/t/p/w154' + movie['poster']
+        movie_poster_part = movie['poster'] if movie['poster'] is not None else '/no-poster-found'
+        poster_url = 'https://image.tmdb.org/t/p/w154' + movie_poster_part
 
         most_played_movies[id] = {'playtime': playtime, 'poster': poster_url}
 
@@ -492,9 +494,11 @@ def movies_stats2():
     movie_released_years = {}
     for movie in watched_movies.values():
         title = movie['title']
-        release_year = str(movie['released_year'])
         for genre in movie['genres']:
             movie_genres[genre] = movie_genres.get(genre, 0) + 1
+        if movie['released_year'] is None:
+            continue
+        release_year = str(movie['released_year'])
         movie_released_years[release_year] = movie_released_years.get(release_year, 0) + 1
 
 
@@ -515,7 +519,10 @@ def movies_countries():
     countries = {}
 
     for movie in watched_movies.keys():
-        country = watched_movies[movie]['country'].upper()
+        country = watched_movies[movie]['country']
+        if country is None:
+            continue
+        country = country.upper()
         country = twoletter_to_threeletter_country_code[country]
 
         countries[country] = countries.get(country, 0) + 1

@@ -20,6 +20,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from joblib import Parallel, delayed
+from tmdbv3api.exceptions import TMDbException
 
 
 # Uncomment Bottom line if you want to download the data again
@@ -33,7 +34,7 @@ trakt_CLIENT_ID = os.environ['TRAKT_API_KEY']
 
 merry = Merry()
 
-@merry._except
+@merry._except(Exception)
 def update_files_on_error():
     update_files()
     sys.exit()
@@ -47,17 +48,20 @@ def get_genres(tmdb_id, type_of_item):
         genres = info[tmdb_id]['genres']
     else:
         genres = []
-        if type_of_item == 'movie':
-            item_info = TMDbMovie.details(tmdb_id)['genres']
-        else:
-            item_info = TMDbTV.details(tmdb_id)['genres']
-
-        for genre in item_info:
-            genre = genre['name']
-            if ' & ' in genre:
-                genres.extend(genre.split(' & '))
+        try:
+            if type_of_item == 'movie':
+                item_info = TMDbMovie.details(tmdb_id)['genres']
             else:
-                genres.append(genre)
+                item_info = TMDbTV.details(tmdb_id)['genres']
+
+            for genre in item_info:
+                genre = genre['name']
+                if ' & ' in genre:
+                    genres.extend(genre.split(' & '))
+                else:
+                    genres.append(genre)
+        except TMDbException:
+            pass
 
         info[tmdb_id]['genres'] = genres
 
@@ -71,13 +75,18 @@ def get_runtime(tmdb_id, type_of_item, tmdb_show_id=0, trakt_show_id=0, season=0
     if 'runtime' in info.get(tmdb_id, {}).keys() and not firstRun:
         runtime = info[tmdb_id]['runtime']
     else:
-        if type_of_item == 'movie':
-            runtime = TMDbMovie.details(tmdb_id)['runtime']
-        else:
-            runtime = TMDbEpisode.details(tmdb_show_id, season, episode)['runtime']
-            if not runtime:
-                url = f"https://api.trakt.tv/shows/{trakt_show_id}/seasons/{season}/episodes/{episode}?extended=full"
-                runtime = requests.get(url, headers=headers).json()['runtime']
+        runtime = 0
+        try:
+            if type_of_item == 'movie':
+                runtime = TMDbMovie.details(tmdb_id)['runtime']
+            else:
+                runtime = TMDbEpisode.details(tmdb_show_id, season, episode)['runtime']
+                if not runtime:
+                    url = f"https://api.trakt.tv/shows/{trakt_show_id}/seasons/{season}/episodes/{episode}?extended=full"
+                    runtime = requests.get(url, headers=headers).json()['runtime']
+        except TMDbException:
+            pass
+
         info[tmdb_id]['runtime'] = runtime
 
     return runtime
@@ -90,26 +99,30 @@ def get_network(tmdb_id, trakt_id):
     if 'network' in info.get(tmdb_id, {}).keys() and not firstRun:
         id = info[tmdb_id]['network']
     else:
-        baseurl = "https://api.trakt.tv/shows/{}?extended=full"
-        url = baseurl.format(trakt_id)
-        network = requests.get(url, headers=headers).json()['network']
-        networks_tmdb_data = TMDbTV.details(tmdb_id)['networks']
-        networks_tmdb_data = {i['name']: i for i in networks_tmdb_data}
+        id = None
+        try:
+            baseurl = "https://api.trakt.tv/shows/{}?extended=full"
+            url = baseurl.format(trakt_id)
+            network = requests.get(url, headers=headers).json()['network']
+            networks_tmdb_data = TMDbTV.details(tmdb_id)['networks']
+            networks_tmdb_data = {i['name']: i for i in networks_tmdb_data}
 
-        if network not in networks_tmdb_data.keys():
-            for tmdb_network in networks_tmdb_data:
-                print('fuzzy matching network')
-                if fuzz.ratio(network, tmdb_network) > 90 or fuzz.partial_ratio(network, tmdb_network):
-                    network = tmdb_network
-                    break
-            else:
-                print('Randomly Selecting Network')
-                network = list(networks_tmdb_data.keys())[0]
+            if network not in networks_tmdb_data.keys():
+                for tmdb_network in networks_tmdb_data:
+                    print('fuzzy matching network')
+                    if fuzz.ratio(network, tmdb_network) > 90 or fuzz.partial_ratio(network, tmdb_network):
+                        network = tmdb_network
+                        break
+                    else:
+                        print('Randomly Selecting Network')
+                        network = list(networks_tmdb_data.keys())[0]
 
-        url, id = itemgetter('logo_path', 'id')(networks_tmdb_data[network])
-        id = str(id)
-        download_tmdb_image(url=url, basepath='network_icons', filename=f"{id}", size='200')
-
+            url, id = itemgetter('logo_path', 'id')(networks_tmdb_data[network])
+            id = str(id)
+            download_tmdb_image(url=url, basepath='network_icons', filename=f"{id}", size='200')
+        except TMDbException:
+            pass
+        
         if id not in networks.keys():
             networks[id] = network
 
@@ -126,19 +139,22 @@ def get_studios(tmdb_id):
         studios = info[tmdb_id]['studios']
     else:
         studios = []
-        studios_data = TMDbMovie.details(tmdb_id).production_companies
+        try:
+            studios_data = TMDbMovie.details(tmdb_id).production_companies
 
-        for studio in studios_data:
-            id, name, url = itemgetter('id', 'name', 'logo_path')(studio)
-            id = str(id)
+            for studio in studios_data:
+                id, name, url = itemgetter('id', 'name', 'logo_path')(studio)
+                id = str(id)
 
-            studio_image_path = download_tmdb_image(url=url, basepath='studios/', filename=f"{id}", size=200)
-            if not studio_image_path:
-                continue
+                studio_image_path = download_tmdb_image(url=url, basepath='studios/', filename=f"{id}", size=200)
+                if not studio_image_path:
+                    continue
 
-            studios.append(id)
+                studios.append(id)
 
-            studioslst[id] = name
+                studioslst[id] = name
+        except TMDbException:
+            pass
 
         info[tmdb_id]['studios'] = studios
 
@@ -152,10 +168,14 @@ def get_poster(tmdb_id, type_of_item):
     if 'poster' in info.get(tmdb_id, {}).keys() and not firstRun:
         poster = info[tmdb_id]['poster']
     else:
-        if type_of_item == 'movie':
-            poster = TMDbMovie.details(tmdb_id).poster_path
-        else:
-            poster = TMDbTV.details(tmdb_id).poster_path
+        poster = None
+        try:
+            if type_of_item == 'movie':
+                poster = TMDbMovie.details(tmdb_id).poster_path
+            else:
+                poster = TMDbTV.details(tmdb_id).poster_path
+        except TMDbException:
+            pass
 
     info[tmdb_id]['poster'] = poster
 
@@ -170,13 +190,17 @@ def get_cast(tmdb_id, type_of_item, tmdb_show_id=0, season=0, episode=0):
         item_cast = info[tmdb_id]['cast']
     else:
         item_cast = []
-        if type_of_item == 'movie':
-            item_cast = TMDbMovie.credits(tmdb_id)['cast']
-        if type_of_item == 'tv':
-            url = f"https://api.themoviedb.org/3/tv/{tmdb_show_id}/season/{season}/episode/{episode}/credits?api_key={tmdb_API_KEY}&language=en-US"
-            item_cast = requests.get(url).json()['cast']
-            guest_cast = requests.get(url).json()['guest_stars']
-            item_cast.extend(guest_cast)
+        try:
+            if type_of_item == 'movie':
+                item_cast = TMDbMovie.credits(tmdb_id)['cast']
+            if type_of_item == 'tv':
+                url = f"https://api.themoviedb.org/3/tv/{tmdb_show_id}/season/{season}/episode/{episode}/credits?api_key={tmdb_API_KEY}&language=en-US"
+                response = requests.get(url).json()
+                item_cast = response.get('cast', [])
+                guest_cast = response.get('guest_stars', [])
+                item_cast.extend(guest_cast)
+        except TMDbException:
+            pass
 
         for actor in item_cast:
             name, id, gender, image = itemgetter('name', 'id', 'gender', 'profile_path')(actor)
@@ -196,13 +220,17 @@ def get_crew(tmdb_id, type_of_item, tmdb_show_id=0, season=0, episode=0):
     if 'crew' in info.get(tmdb_id, {}).keys() and not firstRun:
         item_crew = info[tmdb_id]['crew']
     else:
-        item_crew = {}
-        if type_of_item == 'movie':
-            full_crew = TMDbMovie.credits(tmdb_id)['crew']
-        else:
-            url = f"https://api.themoviedb.org/3/tv/{tmdb_show_id}/season/{season}/episode/{episode}/credits?api_key={tmdb_API_KEY}&language=en-US"
-            full_crew = requests.get(url).json()['crew']
+        full_crew = {}
+        try:
+            if type_of_item == 'movie':
+                full_crew = TMDbMovie.credits(tmdb_id)['crew']
+            else:
+                url = f"https://api.themoviedb.org/3/tv/{tmdb_show_id}/season/{season}/episode/{episode}/credits?api_key={tmdb_API_KEY}&language=en-US"
+                full_crew = requests.get(url).json().get('crew', {})
+        except (TMDbException, KeyError):
+            pass
 
+        item_crew = {}
         have_writer = False
         for _crew in full_crew:
             job = _crew['job']
@@ -215,7 +243,7 @@ def get_crew(tmdb_id, type_of_item, tmdb_show_id=0, season=0, episode=0):
                 name, id, image = itemgetter('name', 'id', 'profile_path')(_crew)
                 crewlist[id] = {'name': name, 'image': image}
                 item_crew[job] = item_crew.get(job, []) + [id]
-
+        
         if not have_writer:
             for _crew in full_crew:
                 job = _crew['job']
