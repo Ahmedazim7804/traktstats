@@ -9,8 +9,8 @@ Trakt [all-time-stats](https://blog.trakt.tv/all-time-year-in-review-f6f931e4461
 
 # Usage
 ```sh
-poetry install # one time
-TMDB_API_KEY="value-here" TRAKT_API_KEY="value-here" poetry run python ui.py
+pip install -r requirements.txt # one time
+TMDB_API_KEY="value-here" TRAKT_API_KEY="value-here" python ui.py
 ```
 
 # Note
