@@ -310,7 +310,7 @@ QPushButton[accessibleName='next']:hover {
             <string>data_label</string>
            </property>
            <property name="text">
-            <string>EPISODE PLAYS</string>
+            <string>MOVIE PLAYS</string>
            </property>
           </widget>
          </item>

@@ -213,7 +213,7 @@ class MainWindow(QtWidgets.QWidget):
         logo_widget.setPixmap(logo)
 
         title = page.label
-        title.setText(f"{name.upper()}'s Top Shows")
+        title.setText(f"{name.upper()}'s Top Movies")
         
         posters = [top_movies[show]['poster'] for show in top_movies]
         playtimes = [top_movies[show]['playtime'] for show in top_movies]
