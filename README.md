@@ -1,3 +1,5 @@
+#### This Repo is archived. You can access new and better version [here](https://github.com/Ahmedazim7804/trakt_vip_stats).
+
 # Traktstats
 Trakt [all-time-stats](https://blog.trakt.tv/all-time-year-in-review-f6f931e4461d) without Trakt VIP
 
